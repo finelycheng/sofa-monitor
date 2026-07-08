@@ -1,0 +1,33 @@
+name: probe-tokopedia
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: curl probe (app-layer reachability)
+        run: |
+          curl -s -o /dev/null -w "curl www: %{http_code} in %{time_total}s\n" --max-time 20 https://www.tokopedia.com/ || echo "curl www: FAILED"
+          curl -s -o /dev/null -w "curl search: %{http_code} in %{time_total}s\n" --max-time 20 "https://www.tokopedia.com/search?st=product&q=sofa" || echo "curl search: FAILED"
+      - name: headless chromium probe (fingerprint reachability)
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm i playwright@1.49.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          cat > probe.mjs << 'JS'
+          import { chromium } from 'playwright';
+          const b = await chromium.launch({ headless: true });
+          const ctx = await b.newContext({ locale: 'id-ID',
+            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36' });
+          const p = await ctx.newPage();
+          try {
+            await p.goto('https://www.tokopedia.com/search?st=product&q=sofa%20bed%20minimalis&ob=8', { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await p.waitForTimeout(4000);
+            const url = p.url(), title = await p.title();
+            const cards = await p.evaluate(() =>
+              [...document.querySelectorAll('a[href*="tokopedia.com"]')].filter(a => a.querySelector('img') && /Rp/.test(a.innerText)).length);
+            console.log(`HEADLESS_RESULT url=${url.slice(0,80)} title="${title.slice(0,50)}" cards=${cards}`);
+          } catch (e) { console.log('HEADLESS_RESULT ERROR ' + e.message.slice(0,120)); }
+          await b.close();
+          JS
+          node probe.mjs
