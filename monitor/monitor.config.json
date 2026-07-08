@@ -1,0 +1,64 @@
+{
+  "keywords": [
+    {"key": "sofa bed minimalis", "topN": 20},
+    {"key": "sofa tanpa tulang", "topN": 20},
+    {"key": "kursi sholat", "topN": 20},
+    {"key": "kursi lantai lipat", "topN": 20},
+    {"key": "sajadah busa tebal", "topN": 20},
+    {"key": "sofa L minimalis", "topN": 20}
+  ],
+  "products": [
+    {"id": "nusahome-vac", "label": "NusaHome 压缩沙发", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/nusahome-sofa-kasur/cod-nusahome-sofa-kepadatan-kain-nyaman-mewah-lembut-keriting-anti-kotor-tahan-kompresi-dapat-dicuci-tahan-aus-furnitur-sederhana-sandaran-ruang-tamu-sofa-malas-lembut-baru-2025-minimalis-1734250936601708470"},
+    {"id": "meexi-d23-a", "label": "MeeXi D23 压缩(主链)", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/meexistore/meexi-sofabed-density-23-sofa-bed-minimalis-sofa-tidur-sofa-kasur-sofa-vacuum-compressible-boneless-couch-sofa-kecil-untuk-kamar-sofa-untuk-ruang-tamu-sempit-tapi-mewah-kasur-sofa-1732127420746466525"},
+    {"id": "meexi-d23-b", "label": "MeeXi D23 压缩(副链)", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/meexistore/meexi-sofabed-density-23-sofa-bed-minimalis-sofa-tidur-sofa-kasur-sofa-vacuum-compressible-boneless-couch-sofa-kecil-untuk-kamar-sofa-untuk-ruang-tamu-sempit-tapi-mewah-kasur-sofa-1732225212112274653"},
+    {"id": "inthebox-100", "label": "INTHEBOX 三折 100x200", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/intheboxid/inthebox-sofabed-ukuran-100x200-100x200"},
+    {"id": "quantum-lipat3", "label": "Quantum 三折 20cm", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/quantumspringbed/sofa-bed-kasur-quantum-lipat-3-tebal-20cm-sofabed-minimalis-nyaman-1729857039579450260"},
+    {"id": "turu-2in1", "label": "TURU 2in1 120x190", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/turubed/turu-sofa-bed-2in1-uk-120x190-turu-minimalis-grey-trifold-kasur-sofa-1729857035885813012"},
+    {"id": "meedo-fuji", "label": "Mee-DO FUJI 地板沙发", "primaryKeyword": "kursi lantai lipat", "trackStock": true,
+     "url": "https://www.tokopedia.com/expertmattress/mee-do-sofa-bed-kursi-lantai-lipat-lesehan-malas-fuji-cream-63b70"},
+    {"id": "furla-kursi", "label": "furlaindah 海绵垫礼拜椅", "primaryKeyword": "kursi sholat", "trackStock": true,
+     "url": "https://www.tokopedia.com/furlaindah/kursi-lipat-kursi-teras-kursi-sholat-motif-bulat-hitam-merah-import-hitam-busa-7de41"},
+    {"id": "puja-silver", "label": "PUJA 高端礼拜椅 Silver", "primaryKeyword": "kursi sholat", "trackStock": true,
+     "url": "https://www.tokopedia.com/pujakursi/kursi-sholat-sujud-hitam"},
+    {"id": "mutiara-sajadah", "label": "mutiara 5cm 加厚礼拜毯", "primaryKeyword": "sajadah busa tebal", "trackStock": true,
+     "url": "https://www.tokopedia.com/mutiara-home/sajadah-muslim-polos-tebal-bulu-rasfur-lembut-nyaman-busa-royal-foam-uk-110x65x5-motif-kabah-bordir-hitam-hampers-turki-1729546963067898015"},
+    {"id": "nala-sofaL", "label": "Nala Argani L型+Pouf", "primaryKeyword": "sofa L minimalis", "trackStock": false,
+     "url": "https://www.tokopedia.com/nala-argani/sofa-l-sofa-minimalis"},
+    {"id": "zfurn-sofaL", "label": "Z furniture L型", "primaryKeyword": "sofa L minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/zfurnituretermurah/sofa-sofa-l-sofa-modern-sofa-minimalis-sofabed-sofa-ruang-tamu-sofa-mewah-sofa-l-minimalis-sofa-l-putus-busa-kayu-furniture-set-asli-1731507818133620151"},
+    {"id": "yonezawa-usb", "label": "yonezawa USB 矮桌", "primaryKeyword": "kursi lantai lipat", "trackStock": true,
+     "url": "https://www.tokopedia.com/yonezawa/yonezawa-cod-meja-lipat-laptop-belajar-foldable-bed-table-adjustable-serbaguna-with-usb-port-meja-portable-1732122243847849185"},
+    {"id": "gotozila", "label": "Goto Zila 高端地板椅", "primaryKeyword": "kursi lantai lipat", "trackStock": true,
+     "url": "https://www.tokopedia.com/gotoliving/goto-zila-folding-lazy-chair-kursi-lipat-tidur-santai-malas-portable-1729841977094620500"},
+    {"id": "tete-sofabed", "label": "TETE 沙发床", "primaryKeyword": "sofa bed minimalis", "trackStock": true,
+     "url": "https://www.tokopedia.com/tete-furniture-store/tete-1-sofa-bed-2-seater-nyaman-kuat-ruang-tamu-minimalis-modern-elegan-sofa-tidur-untuk-ruang-tamu-kecil-apartemen-sofa-2-duduk-kuat-nyaman-sofa-modern-ruang-tamu-sofa-tidur-untuk-kamar-tidur-kecil-sofa-bed-2seater-untuk-rumah-minimalis-orange145-65-70cm-1732663300127753549"}
+  ],
+  "shops": [
+    {"id": "meexistore", "label": "MeeXi", "url": "https://www.tokopedia.com/meexistore"},
+    {"id": "nusahome", "label": "NusaHome", "url": "https://www.tokopedia.com/nusahome-sofa-kasur"},
+    {"id": "inthebox", "label": "INTHEBOX", "url": "https://www.tokopedia.com/intheboxid"},
+    {"id": "quantum", "label": "Quantum Springbed", "url": "https://www.tokopedia.com/quantumspringbed"},
+    {"id": "turu", "label": "TURU", "url": "https://www.tokopedia.com/turubed"},
+    {"id": "furlaindah", "label": "Furla Indah", "url": "https://www.tokopedia.com/furlaindah"},
+    {"id": "pujakursi", "label": "PUJA", "url": "https://www.tokopedia.com/pujakursi"},
+    {"id": "expertmattress", "label": "Expert Mattress(Mee-DO)", "url": "https://www.tokopedia.com/expertmattress"}
+  ],
+  "thresholds": {
+    "priceChangePct": 5, "rankShift": 5, "ratingCountAccel": 1.5,
+    "fxChangePct": 3, "missingDays": 2, "restockMin": 20
+  },
+  "negativeKeywords": ["sobek", "kempes", "tidak mengembang", "lama", "beda warna", "tidak sesuai"],
+  "campaignCalendar": [
+    {"date": "07-07", "label": "Tokopedia 7.7 大促"},
+    {"date": "09-09", "label": "9.9 大促"},
+    {"date": "11-11", "label": "11.11 大促"},
+    {"date": "12-12", "label": "12.12 大促"},
+    {"payday": true, "label": "发薪周(每月25日±3天)"}
+  ]
+}
