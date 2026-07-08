@@ -1,1 +1,140 @@
-<!doctype html>占位
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>竞品监控 · 印尼沙发战场</title>
+<style>
+:root{--ink:#1A2130;--paper:#ECEFEA;--card:#F7F8F5;--indigo:#2B4C7E;--cargo:#E4572E;--leaf:#21735B;--line:#C4CBC2;
+--mono:ui-monospace,'SF Mono',Menlo,monospace;--sans:'PingFang SC','Noto Sans SC',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6}
+.wrap{max-width:1200px;margin:0 auto;padding:26px 18px 60px}
+h1{font-size:clamp(22px,3.4vw,30px);font-weight:900}
+h1 em{font-style:normal;color:var(--cargo)}
+.sub{font-family:var(--mono);font-size:12px;color:#5c6577;letter-spacing:.1em;margin:4px 0 18px}
+.banner{padding:10px 16px;font-size:13.5px;font-weight:700;margin-bottom:14px;display:none}
+.banner.red{display:block;background:#B3261E;color:#fff}
+.banner.yellow{display:block;background:#F2C14E;color:#5c4a00}
+h2{font-size:18px;font-weight:900;border-bottom:2px solid var(--ink);padding-bottom:6px;margin:30px 0 14px}
+.hl{list-style:none}
+.hl li{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--indigo);padding:9px 14px;margin-bottom:8px;font-size:14px}
+.hl li.red{border-left-color:#B3261E}.hl li.yellow{border-left-color:var(--cargo)}
+.hl a{color:var(--indigo)}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:12.5px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:right;white-space:nowrap}
+th{background:var(--ink);color:#EDEFE8;font-family:var(--mono);font-size:11px;letter-spacing:.06em}
+td:first-child,th:first-child{text-align:left}
+.tbl-scroll{overflow-x:auto}
+svg.spark{vertical-align:middle}
+.kwgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.kwcard{background:var(--card);border:1px solid var(--line);padding:12px 14px}
+.kwcard h3{font-size:14px;font-weight:800;margin-bottom:6px}
+.kwcard .meta{font-family:var(--mono);font-size:12px;color:#5c6577}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bars .row{display:grid;grid-template-columns:150px 1fr auto;gap:8px;font-size:12.5px;align-items:center}
+.bars .bar{height:12px;background:var(--cargo);min-width:2px}
+footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:#7a8294;border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>竞品监控 · <em>印尼沙发战场</em></h1>
+  <div class="sub" id="sub">加载中…</div>
+  <div class="banner" id="banner"></div>
+
+  <h2>本周要点</h2>
+  <ul class="hl" id="hl"></ul>
+
+  <h2>竞品清单</h2>
+  <div class="tbl-scroll"><table id="ptable">
+    <thead><tr><th>竞品</th><th>现价 Rp</th><th>折扣</th><th>销量桶</th><th>评分数(周增)</th><th>库存日销(14d)</th><th>库存</th><th>排名</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <h2>关键词战场</h2>
+  <div class="kwgrid" id="kwgrid"></div>
+
+  <h2>弱点雷达(每周差评关键词)</h2>
+  <div class="bars" id="weak"></div>
+
+  <h2>环境</h2>
+  <div class="kwcard" id="env"></div>
+
+  <footer id="foot"></footer>
+</div>
+<script>
+const fmt = (n) => n == null ? '—' : n.toLocaleString('id-ID');
+function spark(vals, w = 110, h = 22, color = '#2B4C7E') {
+  const v = vals.filter((x) => x != null);
+  if (v.length < 2) return '<span style="color:#aaa">—</span>';
+  const min = Math.min(...v), max = Math.max(...v), rng = max - min || 1;
+  const pts = vals.map((x, i) => x == null ? null : `${(i / (vals.length - 1) * w).toFixed(1)},${(h - 2 - (x - min) / rng * (h - 4)).toFixed(1)}`).filter(Boolean);
+  return `<svg class="spark" width="${w}" height="${h}"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${pts.join(' ')}"/></svg>`;
+}
+(async () => {
+  const [series, hl, health] = await Promise.all(
+    ['series.json', 'highlights.json', 'health.json'].map((f) => fetch('monitor_data/' + f).then((r) => r.json()))
+  );
+  document.getElementById('sub').textContent =
+    `数据日期 ${hl.date} · TOKOPEDIA 每日抓取 · 库存差分=精确日销 · Toko销量为累计分桶`;
+
+  // 健康横幅
+  const daysStale = Math.round((Date.now() - new Date(hl.date)) / 86400000);
+  const banner = document.getElementById('banner');
+  if (daysStale >= 2) { banner.className = 'banner red'; banner.textContent = `⚠ 数据已 ${daysStale} 天未更新,检查服务器 cron / 日志`; }
+  else if (health.blocked || (health.errors ?? []).length > 3) { banner.className = 'banner yellow'; banner.textContent = `⚠ 最近一次抓取降级:blocked=${health.blocked} errors=${(health.errors ?? []).length}`; }
+
+  // 要点
+  document.getElementById('hl').innerHTML = (hl.items ?? []).map((x) =>
+    `<li class="${x.level}">${x.icon} ${x.text}${x.url ? ` <a href="${x.url}" target="_blank">→</a>` : ''}</li>`
+  ).join('') || '<li>今日无触发规则,一切平稳</li>';
+
+  // 竞品大表(config 顺序即 series.products key 顺序)
+  const tb = document.querySelector('#ptable tbody');
+  tb.innerHTML = Object.entries(series.products).map(([id, pd]) => {
+    const pts = pd.points, last = pts[pts.length - 1] ?? {};
+    const dv = series.derived?.products?.[id] ?? {};
+    const wd = dv.ratingWeeklyDelta ?? [];
+    const stocks = pts.slice(-15).map((x) => x.stock);
+    const daily = stocks.slice(1).map((s, i) => (stocks[i] != null && s != null && stocks[i] - s >= 0) ? stocks[i] - s : null);
+    return `<tr><td><a href="${pts.length ? '' : ''}#" onclick="return false">${id}</a></td>
+      <td>${fmt(last.price)}</td><td>${dv.discountPct != null ? dv.discountPct + '%' : '—'}</td>
+      <td>${last.soldBucket ?? '—'}</td>
+      <td>${fmt(last.ratingCount)}${wd.length ? ` (+${wd[wd.length - 1]})` : ''}</td>
+      <td>${spark(daily, 110, 22, '#E4572E')}</td>
+      <td>${fmt(last.stock)}</td><td>${last.rank ?? '—'}</td></tr>`;
+  }).join('');
+
+  // 关键词战场
+  document.getElementById('kwgrid').innerHTML = Object.entries(series.keywords).map(([k, kd]) => {
+    const pts = kd.points, last = pts[pts.length - 1] ?? {};
+    const med = pts.slice(-30).map((x) => x.medianPrice);
+    return `<div class="kwcard"><h3>${k}</h3>
+      <div class="meta">中位 Rp${fmt(last.medianPrice)} · 最低 Rp${fmt(last.minPrice)}</div>
+      ${spark(med, 300, 34)}</div>`;
+  }).join('');
+
+  // 弱点雷达
+  const weak = document.getElementById('weak');
+  const rows = [];
+  for (const [id, rv] of Object.entries(series.reviews ?? {})) {
+    const last = rv.points[rv.points.length - 1];
+    if (!last) continue;
+    for (const [kw, n] of Object.entries(last.kw)) if (n > 0) rows.push({ id, kw, n });
+  }
+  rows.sort((a, b) => b.n - a.n);
+  weak.innerHTML = rows.length ? rows.map((r) =>
+    `<div class="row"><span>${r.id} · ${r.kw}</span><span class="bar" style="width:${Math.min(r.n * 24, 480)}px"></span><b>${r.n}</b></div>`
+  ).join('') : '<div class="row"><span>暂无每周评论数据(周一凌晨生成)</span></div>';
+
+  // 环境
+  const fx = series.fx.points;
+  document.getElementById('env').innerHTML =
+    `<div class="meta">IDR/CNY:现 ${fmt(fx[fx.length - 1]?.idrPerCny)} · 30日 ${spark(fx.slice(-30).map((x) => x.idrPerCny), 240, 30, '#21735B')}</div>`;
+  document.getElementById('foot').textContent =
+    `快照只追加 · series 带 .bak · 规则阈值见 monitor.config.json · 生成于 run.js publish()`;
+})().catch((e) => { document.getElementById('sub').textContent = '数据加载失败:' + e.message; });
+</script>
+</body>
+</html>
