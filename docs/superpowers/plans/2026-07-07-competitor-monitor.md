@@ -1535,3 +1535,75 @@ Expected: 今日快照存在,exit=0
 - **Spec 覆盖**:设计 §2 决策表(运行/对象/输出/频率/架构)→ Task 1/8/9/10;§3 指标全集 → 每日核心=Task 6/7,每周=Task 8 reviews + Task 9 弱点雷达,环境层=Task 5 fx + Task 7 大促;§5 组件 → Task 2-9 一一对应;§6 错误处理 → browser 熔断(T3)/重试与 degraded(T8)/防覆盖 .bak(T5)/发布保护(T10 wrapper)/下架高亮(T7);§7 测试 → fixtures(T3/4)、纯函数(T2/6/7)、冒烟(T8)、部署验收(T10/12);§8 风险 → T10 Step2 内嵌 Docker 失败→Actions 决策点。无缺口。
 - **占位符扫描**:无 TBD;`<密码>` 为会话内已知凭据的有意脱敏(不入库),执行者从会话历史取得。
 - **类型一致性**:快照形状(T8 产出)与 updateSeries 消费(T6 测试构造)字段一致(keywords/products/shops/fx/health);extractProduct 返回字段与 series 点字段映射在 T6 updateSeries 中逐一显式;highlights 形状 {level,icon,text,url} 与 dashboard 渲染一致。
+
+---
+
+### Task 10-R(修订): GitHub Actions 执行环境(替代 Docker 方案,探针已实证)
+
+背景:腾讯云对 Tokopedia 应用层黑洞;GitHub 云机 curl/headless 被 TLS 指纹拦,但 **headed 真 Chrome + xvfb 实测可达**(run 28927182180:title 正常,cards=10)。架构改为:GitHub Actions=无状态算力,服务器=数据真源+展示。
+
+**Files:**
+- Modify: `monitor/lib/browser.js`(env 开关 headed 模式)
+- Create: `.github/workflows/daily.yml`, `.github/workflows/weekly.yml`
+- Server: `/home/monitor/data` 目录 + authorized_keys 加专用公钥
+- Secrets: `SSH_PRIVATE_KEY`(专用密钥)、`SERVER_HOST`
+
+**Interfaces:**
+- Consumes: run.js daily/weekly(MONITOR_DATA/MONITOR_OUT env 已支持)
+- Produces: 每日 UTC 20:00(WIB 03:00)自动跑,数据 rsync 回服务器 /home/monitor/data,产物发布到 /usr/share/nginx/html
+
+- [ ] Step 1: browser.js 加 headed 开关:`const headed = process.env.MONITOR_HEADED === '1';` launch 参数改 `chromium.launch(headed ? { headless: false, channel: 'chrome' } : { headless: true })`。npm test 回归(18条,fixtures 测试不受影响)。
+- [ ] Step 2: 生成专用 ssh 密钥对(本地 ssh-keygen -t ed25519 -f /tmp/monitor_key -N ''),公钥追加到服务器 /root/.ssh/authorized_keys,私钥 `gh secret set SSH_PRIVATE_KEY < /tmp/monitor_key`,`gh secret set SERVER_HOST -b 106.55.199.206`,验证 key 登录后删除本地私钥文件。
+- [ ] Step 3: daily.yml:
+```yaml
+name: daily-monitor
+on:
+  schedule: [{cron: '0 20 * * *'}]
+  workflow_dispatch:
+concurrency: {group: monitor, cancel-in-progress: false}
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup ssh
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+      - name: install deps
+        run: cd monitor && npm ci
+      - name: pull data from server
+        run: rsync -az root@${{ secrets.SERVER_HOST }}:/home/monitor/data/ monitor/data/ || true
+      - name: run daily (headed chrome via xvfb)
+        env: {MONITOR_HEADED: '1'}
+        run: cd monitor && xvfb-run --auto-servernum node run.js daily
+      - name: push data + publish
+        if: always()
+        run: |
+          rsync -az monitor/data/ root@${{ secrets.SERVER_HOST }}:/home/monitor/data/
+          if [ -s monitor/out/competitor-monitor.html ]; then
+            rsync -az monitor/out/competitor-monitor.html root@${{ secrets.SERVER_HOST }}:/usr/share/nginx/html/
+            rsync -az monitor/out/monitor_data/ root@${{ secrets.SERVER_HOST }}:/usr/share/nginx/html/monitor_data/
+          fi
+```
+- [ ] Step 4: weekly.yml 同构:cron '30 21 * * 1',run.js weekly,同样 pull/push。
+- [ ] Step 5: 手动 dispatch daily.yml 冒烟:成功标准 = run 绿;服务器 /home/monitor/data/snapshots/ 出现当日快照且 keywords≥4 个词有数据、products≥10 个有 price;/usr/share/nginx/html/monitor_data/series.json 更新。
+- [ ] Step 6: 提交(browser.js + workflows),推送。
+
+---
+
+### Task 10-S(最终修订): 抓取主机 = 62.112.138.227(海外VPS),展示仍在 106.55
+
+数据流:62.112(Docker+cron 抓取,数据真源 /home/monitor/data)→ 产物 scp → 106.55 /usr/share/nginx/html(sofa.wefishing.cn 展示)。GitHub Actions 方案(10-R)搁置备用,probe workflow 保留。
+
+- [ ] Step 0 分层探针(决策点):ssh 62.112 查 OS/内存/磁盘/date/docker;curl tokopedia(仅参考,curl 指纹可能被全网拦);真正判据 = 容器内 playwright headless chromium 打开搜索页;失败再试 npx playwright install chrome + xvfb-run headed。两层都失败 → BLOCKED 报告。
+- [ ] Step 1 browser.js 加 MONITOR_HEADED=1 开关(headless:false, channel:'chrome')+ npm test 回归。
+- [ ] Step 2 62.112 装 Docker(按 OS 用对应源),拉 mcr.microsoft.com/playwright:v1.49.0-jammy。
+- [ ] Step 3 rsync monitor/ 到 62.112:/home/monitor(排除 node_modules/data/out/fixtures);容器内 npm ci。
+- [ ] Step 4 生成 62.112→106.55 的专用 ssh 密钥(62.112 上 ssh-keygen ed25519 无口令),公钥加到 106.55 authorized_keys;run-daily.sh 发布段改为:本地产物先落 /home/monitor/out,再 scp -i 该密钥到 106.55 的 nginx 目录(html + monitor_data/)。按探针结果决定容器命令是否 xvfb-run + MONITOR_HEADED=1。
+- [ ] Step 5 手动全量跑:成功标准 = ≥4 关键词有数据 + ≥10 商品有 price + 106.55 上 monitor_data/series.json 更新。
+- [ ] Step 6 62.112 crontab 装 daily/weekly 两条(核对时区换算 WIB 03:00)。
+- [ ] Step 7 本地提交 browser.js + deploy 脚本修改,推送。
