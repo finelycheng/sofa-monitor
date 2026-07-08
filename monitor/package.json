@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test 'test/*.test.js'",
     "daily": "node run.js daily",
     "weekly": "node run.js weekly"
   },
-  "dependencies": { "playwright": "1.49.0" }
+  "dependencies": {
+    "playwright": "1.49.0"
+  }
 }
