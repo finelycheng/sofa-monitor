@@ -31,3 +31,21 @@ jobs:
           await b.close();
           JS
           node probe.mjs
+      - name: headed real chrome probe (决定性测试)
+        run: |
+          cat > probe2.mjs << 'JS'
+          import { chromium } from 'playwright';
+          const b = await chromium.launch({ headless: false, channel: 'chrome' });
+          const ctx = await b.newContext({ locale: 'id-ID' });
+          const p = await ctx.newPage();
+          try {
+            await p.goto('https://www.tokopedia.com/search?st=product&q=sofa%20bed%20minimalis&ob=8', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await p.waitForTimeout(6000);
+            const url = p.url(), title = await p.title();
+            const cards = await p.evaluate(() =>
+              [...document.querySelectorAll('a[href*="tokopedia.com"]')].filter(a => a.querySelector('img') && /Rp/.test(a.innerText)).length);
+            console.log(`HEADED_RESULT url=${url.slice(0,80)} title="${title.slice(0,50)}" cards=${cards}`);
+          } catch (e) { console.log('HEADED_RESULT ERROR ' + e.message.slice(0,120)); }
+          await b.close();
+          JS
+          xvfb-run --auto-servernum node probe2.mjs
