@@ -91,3 +91,36 @@ test('规则:连续缺数触发红条', () => {
   const h = buildHighlights(s, config, '2026-07-10');
   assert.ok(h.some((x) => x.level === 'red' && x.icon === '⚠️' && /P1/.test(x.text)));
 });
+
+test('缺陷1-修复:跳桶需要 bucket 实际变化(same bucket 无 📈)', () => {
+  let s = updateSeries(undefined, snapDay('2026-07-08'), config);
+  s = updateSeries(s, snapDay('2026-07-09', {
+    products: { p1: { ...snapDay('x').products.p1, soldValue: 1005, soldBucket: '1rb+' } },
+  }), config);
+  const h = buildHighlights(s, config, '2026-07-09');
+  assert.ok(!h.some((x) => x.icon === '📈'));
+  // 验证没有文案"跳桶:1rb+ → 1rb+"
+  assert.ok(!h.some((x) => x.text?.includes('1rb+ → 1rb+')));
+});
+
+test('缺陷2-修复:无数据点文案改为"从未抓到"(无 Infinity)', () => {
+  const configP2 = {
+    thresholds: config.thresholds,
+    products: [
+      { id: 'p1', label: 'P1', primaryKeyword: 'kw', trackStock: true, url: 'https://x/p1' },
+      { id: 'p2', label: 'P2', primaryKeyword: 'kw', trackStock: true, url: 'https://x/p2' },
+    ],
+    keywords: config.keywords,
+    campaignCalendar: [],
+  };
+  let s = updateSeries(undefined, snapDay('2026-07-08'), configP2);
+  // p2 在 config 中但快照无 p2 数据
+  s = updateSeries(s, snapDay('2026-07-09', {
+    products: { p1: snapDay('x').products.p1 },
+  }), configP2);
+  const h = buildHighlights(s, configP2, '2026-07-09');
+  const p2Red = h.find((x) => x.level === 'red' && /P2/.test(x.text));
+  assert.ok(p2Red, '应有 P2 的红条警告');
+  assert.ok(p2Red.text.includes('从未抓到'), '文案应包含"从未抓到"');
+  assert.ok(!p2Red.text.includes('Infinity'), '文案不应包含 Infinity');
+});

@@ -94,7 +94,8 @@ export function buildHighlights(s, config, today) {
     const lastD = last?.d;
     const daysSince = lastD ? Math.round((new Date(today) - new Date(lastD)) / 86400000) : Infinity;
     if (daysSince >= th.missingDays || (last && !last.ok && prev && !prev.ok)) {
-      push('red', '⚠️', `${p.label} 连续 ${Math.max(daysSince, 2)} 天无数据,疑似下架/改链接`, p.url);
+      const msg = !lastD ? `${p.label} 从未抓到数据,检查 URL/配置` : `${p.label} 连续 ${Math.max(daysSince, 2)} 天无数据,疑似下架/改链接`;
+      push('red', '⚠️', msg, p.url);
       continue;
     }
     if (!last || !prev || last.d !== today) continue;
@@ -104,7 +105,7 @@ export function buildHighlights(s, config, today) {
       if (Math.abs(pct) >= th.priceChangePct)
         push('yellow', '💰', `${p.label} 价格 ${pct > 0 ? '+' : ''}${pct.toFixed(0)}%(${prev.price.toLocaleString()} → ${last.price.toLocaleString()})`, p.url);
     }
-    if (last.soldBucket && prev.soldBucket && last.soldValue > prev.soldValue)
+    if (last.soldBucket && prev.soldBucket && last.soldValue > prev.soldValue && last.soldBucket !== prev.soldBucket)
       push('yellow', '📈', `${p.label} 销量跳桶:${prev.soldBucket} → ${last.soldBucket}`, p.url);
 
     const wd = s.derived.products[p.id]?.ratingWeeklyDelta ?? [];
