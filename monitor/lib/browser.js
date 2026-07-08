@@ -3,8 +3,10 @@ import { chromium } from 'playwright';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const gap = () => 8000 + Math.floor(Math.random() * 12000); // 8-20s
 
+const headed = process.env.MONITOR_HEADED === '1';
+
 export async function launch({ fast = false } = {}) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch(headed ? { headless: false, channel: 'chrome' } : { headless: true });
   const ctx = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
     viewport: { width: 1440, height: 900 },
