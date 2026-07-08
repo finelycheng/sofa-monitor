@@ -1,0 +1,3 @@
+# 服务器为北京时间(CST, UTC+8, 已用 date 核实):04:00京=03:00WIB 低峰
+0 4 * * * /home/monitor/deploy/run-daily.sh
+30 5 * * 1 /home/monitor/deploy/run-weekly.sh
