@@ -1,5 +1,5 @@
 // monitor/run.js
-import { readFileSync, mkdirSync, copyFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launch, slowScroll } from './lib/browser.js';
@@ -92,12 +92,23 @@ async function weekly() {
 }
 
 function publish(series, highlights, health) {
-  const dataOut = join(OUT, 'monitor_data');
-  mkdirSync(dataOut, { recursive: true });
-  writeFileSync(join(dataOut, 'series.json'), JSON.stringify(series));
-  writeFileSync(join(dataOut, 'highlights.json'), JSON.stringify({ date: today, items: highlights }));
-  writeFileSync(join(dataOut, 'health.json'), JSON.stringify({ date: today, ...health }));
-  copyFileSync(join(ROOT, 'dashboard/competitor-monitor.html'), join(OUT, 'competitor-monitor.html'));
+  const htmlSrc = join(ROOT, 'dashboard/competitor-monitor.html');
+  if (!existsSync(htmlSrc)) {
+    io.log(DATA, 'publish: dashboard html missing, skip publish');
+    return;
+  }
+
+  try {
+    const dataOut = join(OUT, 'monitor_data');
+    mkdirSync(dataOut, { recursive: true });
+    writeFileSync(join(dataOut, 'series.json'), JSON.stringify(series));
+    writeFileSync(join(dataOut, 'highlights.json'), JSON.stringify({ date: today, items: highlights }));
+    writeFileSync(join(dataOut, 'health.json'), JSON.stringify({ date: today, ...health }));
+    copyFileSync(htmlSrc, join(OUT, 'competitor-monitor.html'));
+  } catch (e) {
+    io.log(DATA, 'publish failed: ' + e.message);
+    process.exitCode = 3;
+  }
 }
 
 if (mode === 'daily') await daily();
