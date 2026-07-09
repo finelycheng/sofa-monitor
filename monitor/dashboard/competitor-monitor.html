@@ -67,7 +67,8 @@ footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:#7a8294;bord
 const fmt = (n) => n == null ? '—' : n.toLocaleString('id-ID');
 function spark(vals, w = 110, h = 22, color = '#2B4C7E') {
   const v = vals.filter((x) => x != null);
-  if (v.length < 2) return '<span style="color:#aaa">—</span>';
+  if (v.length === 1) return '<span style="color:#8a9;font-size:10.5px" title="趋势需≥2天数据">·攒中</span>';
+  if (v.length < 1) return '<span style="color:#bbb">—</span>';
   const min = Math.min(...v), max = Math.max(...v), rng = max - min || 1;
   const pts = vals.map((x, i) => x == null ? null : `${(i / (vals.length - 1) * w).toFixed(1)},${(h - 2 - (x - min) / rng * (h - 4)).toFixed(1)}`).filter(Boolean);
   return `<svg class="spark" width="${w}" height="${h}"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${pts.join(' ')}"/></svg>`;
@@ -76,8 +77,13 @@ function spark(vals, w = 110, h = 22, color = '#2B4C7E') {
   const [series, hl, health] = await Promise.all(
     ['series.json', 'highlights.json', 'health.json'].map((f) => fetch('monitor_data/' + f).then((r) => r.json()))
   );
-  document.getElementById('sub').textContent =
-    `数据日期 ${hl.date} · TOKOPEDIA 每日抓取 · 库存差分=精确日销 · Toko销量为累计分桶`;
+  // 统计已积累天数(以汇率点数为代表),首日给出友好提示
+  const days = (series.fx?.points?.length) || 0;
+  const nascent = days < 2
+    ? ` · <b style="color:#e4572e">首日快照</b> — 日销/价格/汇率趋势曲线需 ≥2 天累积,明日 03:00 起出线`
+    : ` · 已积累 ${days} 天`;
+  document.getElementById('sub').innerHTML =
+    `数据日期 ${hl.date} · TOKOPEDIA 每日抓取 · 库存差分=精确日销 · Toko销量为累计分桶${nascent}`;
 
   // 健康横幅
   const daysStale = Math.round((Date.now() - new Date(hl.date)) / 86400000);
