@@ -1,3 +1,6 @@
-# 服务器为北京时间(CST, UTC+8, 已用 date 核实):04:00京=03:00WIB 低峰
-0 4 * * * /home/monitor/deploy/run-daily.sh
-30 5 * * 1 /home/monitor/deploy/run-weekly.sh
+# 62.112 服务器时区实测(date / timedatectl,2026-07-09):Etc/UTC,并非CST。
+# 目标低峰时段 WIB(UTC+7)03:00 => UTC 20:00(前一日)。
+# daily:每天 UTC 20:00 = WIB 次日 03:00
+0 20 * * * /home/monitor/deploy/run-daily.sh
+# weekly:UTC 周日 20:30 = WIB 周一 03:30(错开 daily 30 分钟)
+30 20 * * 0 /home/monitor/deploy/run-weekly.sh
