@@ -42,3 +42,17 @@ test('io.writeSeries 先备份 .bak', () => {
   assert.equal(JSON.parse(rf(join(d, 'series.json.bak'), 'utf8')).v, 1);
   assert.equal(io.readSeries(d).v, 2);
 });
+
+import { withTimeout } from '../lib/browser.js';
+
+test('withTimeout 正常 resolve 透传', async () => {
+  const v = await withTimeout(Promise.resolve(42), 1000, 'ok');
+  assert.equal(v, 42);
+});
+
+test('withTimeout 超时抛错(挂起的 promise 不会永久等待)', async () => {
+  await assert.rejects(
+    () => withTimeout(new Promise(() => {}), 50, 'hang'),
+    /timeout 50ms: hang/
+  );
+});

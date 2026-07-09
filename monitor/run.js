@@ -2,7 +2,7 @@
 import { readFileSync, mkdirSync, copyFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { launch, slowScroll } from './lib/browser.js';
+import { launch, slowScroll, withTimeout } from './lib/browser.js';
 import { extractKeyword } from './scrape/keyword.js';
 import { extractProduct } from './scrape/product.js';
 import { extractShop } from './scrape/shop.js';
@@ -32,25 +32,27 @@ async function daily() {
       const r = await b.visit(searchUrl(k.key));
       if (r === 'blocked') { snap.health.blocked = true; break; }
       if (r !== 'ok') { snap.health.errors.push(`keyword:${k.key}:${r}`); continue; }
-      await slowScroll(b.page);
-      try { snap.keywords[k.key] = await extractKeyword(b.page, k.topN); }
-      catch (e) { snap.health.errors.push(`keyword:${k.key}:parse:${e.message}`); }
+      try {
+        await withTimeout(slowScroll(b.page), 60000, `scroll:${k.key}`);
+        snap.keywords[k.key] = await withTimeout(extractKeyword(b.page, k.topN), 60000, `keyword:${k.key}`);
+      } catch (e) { snap.health.errors.push(`keyword:${k.key}:${e.message}`); }
     }
     if (!snap.health.blocked) for (const p of products) {
       let r = await b.visit(p.url);
       if (r === 'error') { await new Promise((x) => setTimeout(x, 30000)); r = await b.visit(p.url); } // 重试1次
       if (r === 'blocked') { snap.health.blocked = true; break; }
       if (r !== 'ok') { snap.health.errors.push(`product:${p.id}:${r}`); continue; }
-      try { snap.products[p.id] = await extractProduct(b.page); }
-      catch (e) { snap.health.errors.push(`product:${p.id}:parse:${e.message}`); }
+      try { snap.products[p.id] = await withTimeout(extractProduct(b.page), 60000, `product:${p.id}`); }
+      catch (e) { snap.health.errors.push(`product:${p.id}:${e.message}`); }
     }
     if (!snap.health.blocked) for (const sh of shops) {
       const r = await b.visit(sh.url);
       if (r === 'blocked') { snap.health.blocked = true; break; }
       if (r !== 'ok') { snap.health.errors.push(`shop:${sh.id}:${r}`); continue; }
-      await slowScroll(b.page, 6);
-      try { snap.shops[sh.id] = await extractShop(b.page); }
-      catch (e) { snap.health.errors.push(`shop:${sh.id}:parse:${e.message}`); }
+      try {
+        await withTimeout(slowScroll(b.page, 6), 60000, `scroll:${sh.id}`);
+        snap.shops[sh.id] = await withTimeout(extractShop(b.page), 60000, `shop:${sh.id}`);
+      } catch (e) { snap.health.errors.push(`shop:${sh.id}:${e.message}`); }
     }
   } finally { await b.close(); }
   snap.fx = await fetchFx();
@@ -79,7 +81,7 @@ async function weekly() {
       if (r === 'blocked') break;
       if (r !== 'ok') continue;
       try {
-        const rv = await scanReviews(b.page, config.negativeKeywords);
+        const rv = await withTimeout(scanReviews(b.page, config.negativeKeywords), 90000, `reviews:${p.id}`);
         series.reviews[p.id] ??= { points: [] };
         const pts = series.reviews[p.id].points;
         if (!(pts.length && pts[pts.length - 1].w === week)) pts.push({ w: week, ...rv });
