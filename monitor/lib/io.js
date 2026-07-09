@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync, appendFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync, appendFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 
 export function appendSnapshot(dataDir, dateStr, obj) {
@@ -19,7 +19,10 @@ export function writeSeries(dataDir, series) {
   mkdirSync(dataDir, { recursive: true });
   const f = join(dataDir, 'series.json');
   if (existsSync(f)) copyFileSync(f, f + '.bak');
-  writeFileSync(f, JSON.stringify(series));
+  // 原子写:先写临时文件再 rename,避免进程中途崩溃时 series.json 被截断/损坏。
+  const tmp = f + '.tmp';
+  writeFileSync(tmp, JSON.stringify(series));
+  renameSync(tmp, f);
 }
 
 export function log(dataDir, line) {

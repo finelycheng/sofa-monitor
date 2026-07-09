@@ -63,7 +63,10 @@ async function daily() {
   catch (e) { io.log(DATA, `appendSnapshot skipped: ${e.message}`); }
 
   const series = updateSeries(io.readSeries(DATA), snap, config);
-  io.writeSeries(DATA, series);
+  // writeSeries 落盘失败(磁盘满/权限等)不应让当天抓取白费:记日志后仍用内存里的
+  // series+highlights 继续 publish,尽量把已抓数据展示出去。
+  try { io.writeSeries(DATA, series); }
+  catch (e) { io.log(DATA, `writeSeries failed: ${e.message}`); }
   const highlights = buildHighlights(series, config, today);
 
   publish(series, highlights, snap.health);

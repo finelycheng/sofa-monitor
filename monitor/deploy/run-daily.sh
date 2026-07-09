@@ -14,12 +14,20 @@ LOG="$D/data/logs/host-$(date +%F).log"
   RC=$?
   echo "exit=$RC"
   if [ $RC -ne 0 ]; then touch "$D/data/logs/FAILED-$(date +%F)"; fi
-  # 发布:仅当产物存在才推送(渲染失败不白屏);scp 到展示主机,失败重试一次
+  # 发布:仅当产物存在才推送(渲染失败不白屏);scp 到展示主机,失败重试一次。
+  # 无条件 echo "published" 曾经不可靠:重试后仍失败也会打印成功信号;改为检查两组
+  # scp 的最终退出码,失败则落 FAILED-publish 标记且不打印 published。
   if [ -s "$D/out/competitor-monitor.html" ]; then
     scp -o StrictHostKeyChecking=no "$D/out/competitor-monitor.html" "$REMOTE":/usr/share/nginx/html/ \
       || { sleep 5; scp -o StrictHostKeyChecking=no "$D/out/competitor-monitor.html" "$REMOTE":/usr/share/nginx/html/; }
+    RC_HTML=$?
     scp -o StrictHostKeyChecking=no "$D"/out/monitor_data/*.json "$REMOTE":/usr/share/nginx/html/monitor_data/ \
       || { sleep 5; scp -o StrictHostKeyChecking=no "$D"/out/monitor_data/*.json "$REMOTE":/usr/share/nginx/html/monitor_data/; }
-    echo "published"
+    RC_DATA=$?
+    if [ $RC_HTML -eq 0 ] && [ $RC_DATA -eq 0 ]; then
+      echo "published"
+    else
+      touch "$D/data/logs/FAILED-publish-$(date +%F)"
+    fi
   fi
 } >>"$LOG" 2>&1

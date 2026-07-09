@@ -43,8 +43,10 @@ export async function launch({ fast = false } = {}) {
   let ctx = null;
   let page = null;
   let first = true;
-  async function cyclePage() {
-    if (ctx) { try { await ctx.close(); } catch {} }
+  async function closeCtx() {
+    if (ctx) { try { await ctx.close(); } catch {} ctx = null; page = null; }
+  }
+  async function openCtx() {
     ctx = await browser.newContext(CONTEXT_OPTS);
     page = await ctx.newPage();
   }
@@ -53,9 +55,13 @@ export async function launch({ fast = false } = {}) {
     get page() { return page; }, // getter:换页后 page 被替换,调用方(run.js 用 b.page)须拿当前实例
     /** 访问 url;返回 'ok' | 'blocked'。blocked = 熔断信号,调用方应放弃当日剩余条目 */
     async visit(url) {
+      // 先关掉上一条目的 ctx 再 gap-sleep:上一页若因 withTimeout 超时而挂起(evaluate 仍在
+      // 后台跑),旧写法把 close 放在 sleep 之后,挂起页会在整个 8-20s 等待期内和(稍后开的)
+      // 新页同时占内存。提前到 sleep 之前关闭,把这段双开窗口收窄到 0。
+      await closeCtx();
       if (!first && !fast) await sleep(gap());
       first = false;
-      await cyclePage(); // 每次访问全新 context+page(fast 模式也换,开销 ~100ms,换来干净页)
+      await openCtx(); // 每次访问全新 context+page(fast 模式也换,开销 ~100ms,换来干净页)
       try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
         await sleep(2500); // 等 JS 渲染
