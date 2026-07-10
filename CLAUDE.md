@@ -87,3 +87,11 @@ archive/          duplicates=重复文件 / legacy-report=旧报告生成器(fin
 - 代码修复史沉淀在 `monitor/lib/browser.js` 注释(HARDEN_ARGS 内存参数、每页新context)和 `monitor/deploy/`(手动Xvfb 而非 xvfb-run)。
 
 **首次验证达标**(2026-07-09):6/6 关键词有数据、13/15 商品有价、内存峰值 ~800MB。首日 highlights 为空正常(变化规则需次日基线)。
+
+### 店铺画像子系统(shop-*)
+同一 `monitor/` 内的孪生扩展,独立错峰跑,监控 5 家头部沙发店(MeeXi/NusaHome/INTHEBOX/Quantum/TURU)销量 top20。设计/计划 `docs/superpowers/specs|plans/2026-07-09-shop-profile-monitor*`。
+- **shop-daily**(cron UTC21:00=WIB04:00):每店 `?sort=8`(销量降序)取 top20 → 每产品六维度字段(标题全文/描述/图/变体/信任要素)+ 评论区差评词计数。产物 `data/shops/<id>.json`。
+- **shop-weekly**(cron 周日UTC22:00):每产品最近50条评论原文 + **DeepSeek 打法画像卡**(卖点/定价/人群/差异化/效果/弱点/狙击点/总结)。
+- **DeepSeek key** 存 VPS `/home/monitor/.env` 的 `DEEPSEEK_API_KEY`(**不进 git**);deploy 脚本 source 它并 -e 透传进容器;`playbookAnalyzer.js` 从 env 读,无 key 则跳过画像。
+- 看板 **/shop-profiles.html**(工具台📊入口):5店分区,点产品行展开打法情报卡 + 50评论。数据 /shop_data/(含 reviews/<pid>.json)。
+- 文件:`shop-run.js`(shop-daily/weekly 编排)、`scrape/shopProfile.js`(top20+六维度)、`scrape/productReviews.js`(50评论)、`scrape/playbookAnalyzer.js`(DeepSeek)、`analyze-shops.js`(差分)、`deploy/run-shop-*.sh`。测试 `cd monitor && npm test`(串行,`--test-concurrency=1`)。
