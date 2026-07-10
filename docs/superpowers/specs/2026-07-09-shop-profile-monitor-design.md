@@ -25,7 +25,7 @@
 | 产品图 | 存 URL(每日刷新,dashboard 只展示最新快照) |
 | **打法画像六维度** | 全要:①主打卖点 ②定价打法 ③SKU/变体策略 ④信任转化要素 ⑤视觉打法 ⑥流量打法 |
 | **打法画像频率** | 每周 LLM 提炼一次(跟 shop-weekly 评论抓取同批) |
-| **LLM 落地** | 见 §3.5,待用户确认(调 Claude API 全自动 / 会话半自动) |
+| **LLM 落地** | DeepSeek API 全自动(定):VPS shop-weekly 抓完逐产品调 deepseek-chat 生成画像卡,并入 dashboard。key 存 VPS 环境变量(**不进 git**)。 |
 
 ## 3. 架构与数据流
 
@@ -79,9 +79,12 @@
   总结: "SEO+密度信任+伪折扣的性价比打法,弱在耐久" }
 ```
 
-**LLM 落地(§2 待确认)**:
-- 方案A **VPS 自动调 Claude API**(Haiku):shop-weekly 抓完 → 逐产品调 API 生成画像卡 → 并入 dashboard。全自动,每周 100 产品约几毛钱,需 Anthropic API key(存 VPS 环境变量)。
-- 方案B **会话半自动**:VPS 抓完存原始数据包 → 每周你让我(Claude Code 会话)读数据生成画像卡再发布。不需 API key/成本,但需你每周触发一次。
+**LLM 落地(定:DeepSeek API 全自动)**:
+- 新增 `monitor/scrape/playbookAnalyzer.js`:输入每产品的 titleFull/description/variants/trust/最近50评论,调 **DeepSeek `deepseek-chat`**(OpenAI 兼容,endpoint `https://api.deepseek.com/chat/completions`),用固定 prompt 输出画像卡 JSON(卖点/定价/人群/差异化/效果/弱点/狙击点/总结)。
+- 由 shop-weekly 在评论抓完后逐产品调用(~100 次/周,DeepSeek 极便宜);结果写 `data/shop-cards/<week>.json`,并入发布产物。
+- **API key 存 VPS 环境变量 `DEEPSEEK_API_KEY`(写入 VPS 的 gitignore 文件如 `/home/monitor/.env`,run 脚本 source 它;绝不硬编码进代码、绝不进 git/GitHub)**。
+- prompt + 画像卡 schema 在 plan 里固化;LLM 输出用 JSON mode + 校验,失败重试1次,再失败该产品画像标 null(不阻塞其他)。
+- 健壮性:DeepSeek 调用包超时(30s)+ 失败降级(画像缺失不影响结构化数据展示)。
 
 ## 4. 数据结构
 
