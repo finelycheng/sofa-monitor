@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { launch, slowScroll, withTimeout } from './lib/browser.js';
 import { extractShopTop, extractProductProfile } from './scrape/shopProfile.js';
 import { extractReviews } from './scrape/productReviews.js';
-import { analyzePlaybook } from './scrape/playbookAnalyzer.js';
+import { analyzePlaybook, analyzeReviewInsight } from './scrape/playbookAnalyzer.js';
 import { updateShopSeries, shopHighlights } from './analyze-shops.js';
 import * as io from './lib/io.js';
 
@@ -85,6 +85,7 @@ async function shopWeekly() {
   const profiles = dry ? config.shopProfiles.slice(0, 1) : config.shopProfiles;
   const b = await launch();
   const cards = readJson(join(DATA, 'shop-cards', `${week}.json`), {});
+  const insights = readJson(join(DATA, 'shop-insights', `${week}.json`), {});
   try {
     for (const sp of profiles) {
       const shopFile = readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] });
@@ -103,16 +104,20 @@ async function shopWeekly() {
           const card = await analyzePlaybook({ ...p, titleFull: p.name, priceIdr: p.price }, reviews, { apiKey });
           if (card) cards[p.productId] = { ...card, name: p.name, shop: sp.id, week };
           writeJson(join(DATA, 'shop-cards', `${week}.json`), cards); // 增量落盘
+          // 用户评论洞察卡(好评/差评/购买动机/真实反馈/口碑)
+          const insight = await analyzeReviewInsight({ ...p, titleFull: p.name }, reviews, { apiKey });
+          if (insight) insights[p.productId] = { ...insight, name: p.name, shop: sp.id, week };
+          writeJson(join(DATA, 'shop-insights', `${week}.json`), insights);
         }
       }
     }
   } finally { await b.close(); }
   const series = readJson(join(DATA, 'shop-series.json'), {});
-  publishShops(series, cards);
-  io.log(DATA, `shop-weekly done: cards=${Object.keys(cards).length}`);
+  publishShops(series, cards, insights);
+  io.log(DATA, `shop-weekly done: cards=${Object.keys(cards).length} insights=${Object.keys(insights).length}`);
 }
 
-function publishShops(series, cards) {
+function publishShops(series, cards, insights) {
   const htmlSrc = join(ROOT, 'dashboard/shop-profiles.html');
   if (!existsSync(htmlSrc)) { io.log(DATA, 'shop publish: html missing'); return; }
   try {
@@ -125,6 +130,11 @@ function publishShops(series, cards) {
     let allCards = cards || {};
     if (!cards && existsSync(cardsDir)) { const f = readdirSync(cardsDir).sort().pop(); if (f) allCards = JSON.parse(readFileSync(join(cardsDir, f), 'utf8')); }
     writeFileSync(join(d, 'shop-cards.json'), JSON.stringify(allCards));
+    // 评论洞察卡:daily 传 undefined 时从磁盘读最近一周
+    const insDir = join(DATA, 'shop-insights');
+    let allInsights = insights || {};
+    if (!insights && existsSync(insDir)) { const f = readdirSync(insDir).sort().pop(); if (f) allInsights = JSON.parse(readFileSync(join(insDir, f), 'utf8')); }
+    writeFileSync(join(d, 'shop-insights.json'), JSON.stringify(allInsights));
     const reviewsSrc = join(DATA, 'shop-reviews');
     if (existsSync(reviewsSrc)) cpSync(reviewsSrc, join(d, 'reviews'), { recursive: true });
     copyFileSync(htmlSrc, join(OUT, 'shop-profiles.html'));

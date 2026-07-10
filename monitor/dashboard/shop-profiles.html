@@ -20,6 +20,10 @@ td img{width:44px;height:44px;object-fit:cover;border-radius:4px}
 .expand{cursor:pointer;color:var(--cargo);font-size:11px;font-family:var(--mono)}
 .card{display:none;background:#fff;border:1px solid var(--line);padding:12px 14px;margin-top:6px;font-size:12.5px}
 .card.on{display:block}
+.subcard{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:6px;background:#fbfcfa}
+.subcard.insight{border-left:3px solid var(--leaf)}
+.scH{font-weight:800;font-size:11px;letter-spacing:.08em;color:var(--indigo);margin-bottom:4px}
+.subcard.insight .scH{color:var(--leaf)}
 .card b{color:var(--indigo)}.card .snipe{color:var(--cargo);font-weight:700}
 .card .reviews{margin-top:8px;max-height:200px;overflow-y:auto;border-top:1px dashed var(--line);padding-top:6px}
 .card .reviews div{padding:3px 0;border-bottom:1px solid #eee;color:#444}
@@ -33,22 +37,29 @@ footer{margin-top:32px;font-family:var(--mono);font-size:11px;color:#7a8294;bord
 </div><script>
 const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
 (async()=>{
-  const [series,hi,cards]=await Promise.all(['shop-series.json','shop-highlights.json','shop-cards.json'].map(f=>fetch('shop_data/'+f).then(r=>r.json()).catch(()=>({}))));
+  const [series,hi,cards,insights]=await Promise.all(['shop-series.json','shop-highlights.json','shop-cards.json','shop-insights.json'].map(f=>fetch('shop_data/'+f).then(r=>r.json()).catch(()=>({}))));
   const date=hi.date||'—';
-  document.getElementById('sub').innerHTML=`数据日期 ${date} · 5 店销量 top20 · 打法画像每周 DeepSeek 生成 · 点产品行展开情报卡`;
+  document.getElementById('sub').innerHTML=`数据日期 ${date} · 5 店销量 top20 · 打法卡+用户评论洞察每周 DeepSeek 生成 · 点产品行展开`;
   const box=document.getElementById('shops');
   for(const [id,sh] of Object.entries(series)){
     const last=sh.snapshots?.[sh.snapshots.length-1];if(!last)continue;
     const hls=(hi.byShop?.[id]||[]);
     const rows=last.products.map((p,i)=>{
-      const c=cards[p.productId];
-      const cardHtml=c?`<div class="card" id="c-${p.productId}">
+      const c=cards[p.productId], ins=insights[p.productId];
+      const playbookHtml=c?`<div class="subcard"><div class="scH">🎯 商业打法</div>
         <div><b>卖点</b>:${c.sellingPoint||'—'}</div><div><b>定价</b>:${c.pricing||'—'}</div>
         <div><b>人群</b>:${c.audience||'—'}</div><div><b>差异化</b>:${c.differentiation||'—'}</div>
         <div><b>效果</b>:${c.effectiveness||'—'}</div><div><b>弱点</b>:${c.weakness||'—'}</div>
-        <div class="snipe">🎯 狙击点:${c.snipePoint||'—'}</div><div><b>总结</b>:${c.summary||'—'}</div>
-        <div class="reviews" id="rv-${p.productId}"><i style="color:#999">评论加载…</i></div></div>`
-        :`<div class="card" id="c-${p.productId}"><i style="color:#999">画像卡待每周 DeepSeek 生成(周日跑)</i></div>`;
+        <div class="snipe">狙击点:${c.snipePoint||'—'}</div><div><b>总结</b>:${c.summary||'—'}</div></div>`
+        :`<div class="subcard"><i style="color:#999">打法卡待每周 DeepSeek 生成(周日跑)</i></div>`;
+      const insHtml=ins?`<div class="subcard insight"><div class="scH">👥 用户评论洞察</div>
+        <div><b>👍 用户夸</b>:${(ins.praises||[]).map(x=>`${x.point}(${x.count})`).join(' · ')||'—'}</div>
+        <div><b>👎 用户骂</b>:${(ins.complaints||[]).map(x=>`${x.point}(${x.count})`).join(' · ')||'—'}</div>
+        <div><b>🛒 为什么买</b>:${(ins.motivations||[]).join(' / ')||'—'}</div>
+        <div><b>💬 真实反馈</b>:${ins.truthSummary||'—'}</div>
+        <div><b>⭐ 口碑</b>:${ins.wordOfMouth||'—'}</div></div>`
+        :`<div class="subcard insight"><i style="color:#999">评论洞察待每周 DeepSeek 生成(周日跑)</i></div>`;
+      const cardHtml=`<div class="card" id="c-${p.productId}">${playbookHtml}${insHtml}<div class="reviews" id="rv-${p.productId}"><i style="color:#999">评论加载…</i></div></div>`;
       return `<tr><td>${p.rank}</td><td>${p.imageUrl?`<img src="${p.imageUrl}" loading="lazy">`:''}</td>
         <td class="pname"><a href="${p.url}" target="_blank">${p.name}</a><br><span class="expand" onclick="document.getElementById('c-${p.productId}').classList.toggle('on');loadRv('${p.productId}')">▸ 打法情报</span>${cardHtml}</td>
         <td>${p.soldBucket||'—'}</td><td>Rp${fmt(p.price)}${p.discount?` <span style="color:#e4572e">-${p.discount}%</span>`:''}</td>

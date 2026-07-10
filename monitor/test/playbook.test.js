@@ -29,3 +29,31 @@ test('analyzePlaybook 失败重试后返 null 不抛', async () => {
   const card = await analyzePlaybook(product, reviews, { apiKey: 'sk-test', fetchImpl });
   assert.equal(card, null);
 });
+
+import { buildReviewInsightPrompt, analyzeReviewInsight } from '../scrape/playbookAnalyzer.js';
+
+test('buildReviewInsightPrompt 含评论+要求好评差评JSON', () => {
+  const p = buildReviewInsightPrompt({ titleFull: 'MeeXi Sofabed' }, [{ rating: 5, text: 'empuk banget nyaman' }, { rating: 1, text: 'kempes setelah sebulan' }]);
+  assert.match(p, /empuk banget/);
+  assert.match(p, /kempes/);
+  assert.match(p, /praises/);
+  assert.match(p, /complaints/);
+  assert.match(p, /motivations/);
+});
+
+test('analyzeReviewInsight 解析评论洞察卡', async () => {
+  const fake = { praises: [{ point: '坐感软empuk', count: 12 }], complaints: [{ point: '用久塌陷', count: 5 }],
+    motivations: ['小户型'], truthSummary: '性价比好但耐久差', wordOfMouth: '多数满意有复购' };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(fake) } }] }) });
+  const card = await analyzeReviewInsight({ productId: 'p1', titleFull: 'x' }, [{ rating: 5, text: 'a' }], { apiKey: 'sk-test', fetchImpl });
+  assert.equal(card.productId, 'p1');
+  assert.equal(card.praises[0].point, '坐感软empuk');
+  assert.equal(card.complaints[0].count, 5);
+  assert.equal(card.truthSummary, '性价比好但耐久差');
+});
+
+test('analyzeReviewInsight 失败返 null 不抛', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 500, json: async () => ({}) });
+  const card = await analyzeReviewInsight({ productId: 'p1' }, [], { apiKey: 'sk-test', fetchImpl });
+  assert.equal(card, null);
+});

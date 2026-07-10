@@ -1,3 +1,30 @@
+// DeepSeek 通用调用:JSON mode + 重试1次,失败返 null 不抛
+async function callDeepSeek(prompt, { apiKey, fetchImpl = fetch, timeoutMs = 30000, maxTokens = 800 } = {}) {
+  const body = {
+    model: 'deepseek-chat',
+    messages: [{ role: 'user', content: prompt }],
+    response_format: { type: 'json_object' },
+    temperature: 0.3, max_tokens: maxTokens,
+  };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const resp = await fetchImpl('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!resp.ok) { if (attempt === 0) continue; return null; }
+      const j = await resp.json();
+      const content = j?.choices?.[0]?.message?.content;
+      if (!content) { if (attempt === 0) continue; return null; }
+      return JSON.parse(content);
+    } catch { if (attempt === 0) continue; return null; }
+  }
+  return null;
+}
+
+// ── 商业打法卡(卖点/定价/人群/差异化/效果/弱点/狙击点) ──
 export function buildPrompt(p, reviews) {
   const rv = reviews.slice(0, 50).map((r) => `[${r.rating ?? '?'}★] ${r.text}`).join('\n');
   return `你是印尼沙发电商竞品分析师。根据以下 Tokopedia 产品信息和买家评论,提炼这个竞品的商业打法。
@@ -14,28 +41,25 @@ ${rv}
 {"sellingPoint":"主打卖点(标题堆的SEO词+核心主张)","pricing":"定价打法","audience":"目标人群","differentiation":"差异化点(vs同类)","effectiveness":"效果评级(★1-5+一句依据)","weakness":"弱点(差评暴露的软肋)","snipePoint":"我方狙击点(怎么正面打它)","summary":"一句话打法总结"}`;
 }
 
-export async function analyzePlaybook(product, reviews, { apiKey, fetchImpl = fetch, timeoutMs = 30000 } = {}) {
-  const body = {
-    model: 'deepseek-chat',
-    messages: [{ role: 'user', content: buildPrompt(product, reviews) }],
-    response_format: { type: 'json_object' },
-    temperature: 0.3, max_tokens: 800,
-  };
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const resp = await fetchImpl('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (!resp.ok) { if (attempt === 0) continue; return null; }
-      const j = await resp.json();
-      const content = j?.choices?.[0]?.message?.content;
-      if (!content) { if (attempt === 0) continue; return null; }
-      const card = JSON.parse(content);
-      return { productId: product.productId, ...card };
-    } catch { if (attempt === 0) continue; return null; }
-  }
-  return null;
+export async function analyzePlaybook(product, reviews, opts = {}) {
+  const card = await callDeepSeek(buildPrompt(product, reviews), opts);
+  return card ? { productId: product.productId, ...card } : null;
+}
+
+// ── 用户评论洞察卡(好评/差评/购买动机/真实反馈/口碑) ──
+export function buildReviewInsightPrompt(p, reviews) {
+  const rv = reviews.slice(0, 50).map((r) => `[${r.rating ?? '?'}★] ${r.text}`).join('\n');
+  return `你是印尼沙发买家研究员。仔细读以下某沙发产品的 Tokopedia 买家评论,提炼用户对这个沙发的真实反馈——他们夸什么、骂什么、为什么买。
+
+产品: ${p.titleFull || p.name}
+买家评论(最多50条,格式 [星级] 内容):
+${rv}
+
+只输出 JSON,字段全部中文值。praises/complaints 按提及频次从高到低排序,count 是大致提及条数(整数):
+{"praises":[{"point":"用户夸的具体点(如 坐感软/性价比高/物流快)","count":数字}],"complaints":[{"point":"用户骂的具体点(如 用久塌陷/面料薄/色差)","count":数字}],"motivations":["购买动机(如 送父母/小户型/换旧沙发)"],"truthSummary":"一段话讲透这沙发的真实体验:好在哪、坑在哪、什么人买了最满意、什么人最后悔","wordOfMouth":"口碑总结:整体评价倾向 + 有无复购/推荐提及"}`;
+}
+
+export async function analyzeReviewInsight(product, reviews, opts = {}) {
+  const card = await callDeepSeek(buildReviewInsightPrompt(product, reviews), { maxTokens: 1000, ...opts });
+  return card ? { productId: product.productId, ...card } : null;
 }
