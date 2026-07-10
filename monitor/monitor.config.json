@@ -1,4 +1,11 @@
 {
+  "shopProfiles": [
+    {"id": "meexistore", "name": "MeeXi", "shopUrl": "https://www.tokopedia.com/meexistore", "topN": 20},
+    {"id": "nusahome", "name": "NusaHome", "shopUrl": "https://www.tokopedia.com/nusahome-sofa-kasur", "topN": 20},
+    {"id": "inthebox", "name": "INTHEBOX", "shopUrl": "https://www.tokopedia.com/intheboxid", "topN": 20},
+    {"id": "quantum", "name": "Quantum", "shopUrl": "https://www.tokopedia.com/quantumspringbed", "topN": 20},
+    {"id": "turu", "name": "TURU", "shopUrl": "https://www.tokopedia.com/turubed", "topN": 20}
+  ],
   "keywords": [
     {"key": "sofa bed minimalis", "topN": 20},
     {"key": "sofa tanpa tulang", "topN": 20},
