@@ -49,11 +49,12 @@ async function shopDaily() {
             imageUrl: prof.mainImages?.[0] || t.imageUrl, soldBucket: prof.soldBucket ?? t.soldBucket,
             soldValue: prof.soldValue ?? t.soldValue, rating: prof.rating, ratingCount: prof.ratingCount,
             price: prof.priceIdr, discount: prof.discount, variantCount: prof.variants?.length ?? 0,
+            description: prof.description, variants: prof.variants,
             trust: prof.trust, negKw });
         } catch (e) { io.log(DATA, `shop:${sp.id}:prod:${t.productId}:${e.message}`); }
       }
       const snap = { date: today, shop: sp.id, shopName: sp.name, products };
-      writeJson(join(DATA, 'shops', `${sp.id}.json`), { ...(readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] })), shop: sp.id, shopName: sp.name, snapshots: [...readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] }).snapshots.slice(-89), { date: today, products }] });
+      writeJson(join(DATA, 'shops', `${sp.id}.json`), { ...(readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] })), shop: sp.id, shopName: sp.name, snapshots: [...readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] }).snapshots.slice(-89).filter(s=>s.date!==today), { date: today, products }] });
       series = updateShopSeries(series, snap);
       writeJson(seriesPath, series); // 每店落盘一次(部分成功留数据)
     }
