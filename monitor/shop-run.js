@@ -1,5 +1,5 @@
 // monitor/shop-run.js
-import { readFileSync, mkdirSync, copyFileSync, writeFileSync, existsSync, readdirSync, renameSync } from 'node:fs';
+import { readFileSync, mkdirSync, copyFileSync, cpSync, writeFileSync, existsSync, readdirSync, renameSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launch, slowScroll, withTimeout } from './lib/browser.js';
@@ -115,6 +115,8 @@ function publishShops(series, cards) {
     let allCards = cards || {};
     if (!cards && existsSync(cardsDir)) { const f = readdirSync(cardsDir).sort().pop(); if (f) allCards = JSON.parse(readFileSync(join(cardsDir, f), 'utf8')); }
     writeFileSync(join(d, 'shop-cards.json'), JSON.stringify(allCards));
+    const reviewsSrc = join(DATA, 'shop-reviews');
+    if (existsSync(reviewsSrc)) cpSync(reviewsSrc, join(d, 'reviews'), { recursive: true });
     copyFileSync(htmlSrc, join(OUT, 'shop-profiles.html'));
   } catch (e) { io.log(DATA, 'shop publish failed: ' + e.message); process.exitCode = 3; }
 }

@@ -1,1 +1,68 @@
-<!doctype html>占位
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>头部店铺打法情报 · 印尼沙发</title>
+<style>
+:root{--ink:#1A2130;--paper:#ECEFEA;--card:#F7F8F5;--indigo:#2B4C7E;--cargo:#E4572E;--leaf:#21735B;--line:#C4CBC2;--mono:ui-monospace,'SF Mono',Menlo,monospace;--sans:'PingFang SC','Noto Sans SC',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:clamp(22px,3.4vw,30px);font-weight:900}h1 em{font-style:normal;color:var(--cargo)}
+.sub{font-family:var(--mono);font-size:12px;color:#5c6577;margin:4px 0 16px}
+.shop{margin-top:28px;border-top:3px solid var(--ink);padding-top:12px}
+.shop h2{font-size:20px;font-weight:900}
+.hl{list-style:none;margin:8px 0}.hl li{font-size:13px;padding:4px 10px;border-left:3px solid var(--indigo);background:var(--card);margin-bottom:4px}
+.hl li.yellow{border-left-color:var(--cargo)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--card);margin-top:8px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ink);color:#EDEFE8;font-family:var(--mono);font-size:11px}
+td img{width:44px;height:44px;object-fit:cover;border-radius:4px}
+.pname{max-width:260px}.pname a{color:var(--indigo);text-decoration:none;font-weight:600}
+.expand{cursor:pointer;color:var(--cargo);font-size:11px;font-family:var(--mono)}
+.card{display:none;background:#fff;border:1px solid var(--line);padding:12px 14px;margin-top:6px;font-size:12.5px}
+.card.on{display:block}
+.card b{color:var(--indigo)}.card .snipe{color:var(--cargo);font-weight:700}
+.card .reviews{margin-top:8px;max-height:200px;overflow-y:auto;border-top:1px dashed var(--line);padding-top:6px}
+.card .reviews div{padding:3px 0;border-bottom:1px solid #eee;color:#444}
+.tbl-scroll{overflow-x:auto}
+footer{margin-top:32px;font-family:var(--mono);font-size:11px;color:#7a8294;border-top:1px solid var(--line);padding-top:10px}
+</style></head><body><div class="wrap">
+<h1>头部店铺<em>打法情报</em></h1>
+<div class="sub" id="sub">加载中…</div>
+<div id="shops"></div>
+<footer id="foot"></footer>
+</div><script>
+const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
+(async()=>{
+  const [series,hi,cards]=await Promise.all(['shop-series.json','shop-highlights.json','shop-cards.json'].map(f=>fetch('shop_data/'+f).then(r=>r.json()).catch(()=>({}))));
+  const date=hi.date||'—';
+  document.getElementById('sub').innerHTML=`数据日期 ${date} · 5 店销量 top20 · 打法画像每周 DeepSeek 生成 · 点产品行展开情报卡`;
+  const box=document.getElementById('shops');
+  for(const [id,sh] of Object.entries(series)){
+    const last=sh.snapshots?.[sh.snapshots.length-1];if(!last)continue;
+    const hls=(hi.byShop?.[id]||[]);
+    const rows=last.products.map((p,i)=>{
+      const c=cards[p.productId];
+      const cardHtml=c?`<div class="card" id="c-${p.productId}">
+        <div><b>卖点</b>:${c.sellingPoint||'—'}</div><div><b>定价</b>:${c.pricing||'—'}</div>
+        <div><b>人群</b>:${c.audience||'—'}</div><div><b>差异化</b>:${c.differentiation||'—'}</div>
+        <div><b>效果</b>:${c.effectiveness||'—'}</div><div><b>弱点</b>:${c.weakness||'—'}</div>
+        <div class="snipe">🎯 狙击点:${c.snipePoint||'—'}</div><div><b>总结</b>:${c.summary||'—'}</div>
+        <div class="reviews" id="rv-${p.productId}"><i style="color:#999">评论加载…</i></div></div>`
+        :`<div class="card" id="c-${p.productId}"><i style="color:#999">画像卡待每周 DeepSeek 生成(周日跑)</i></div>`;
+      return `<tr><td>${p.rank}</td><td>${p.imageUrl?`<img src="${p.imageUrl}" loading="lazy">`:''}</td>
+        <td class="pname"><a href="${p.url}" target="_blank">${p.name}</a><br><span class="expand" onclick="document.getElementById('c-${p.productId}').classList.toggle('on');loadRv('${p.productId}')">▸ 打法情报</span>${cardHtml}</td>
+        <td>${p.soldBucket||'—'}</td><td>Rp${fmt(p.price)}${p.discount?` <span style="color:#e4572e">-${p.discount}%</span>`:''}</td>
+        <td>${p.rating??'—'}<br><small>${fmt(p.ratingCount)}评</small></td>
+        <td>${Object.entries(p.negKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td></tr>`;
+    }).join('');
+    box.insertAdjacentHTML('beforeend',`<section class="shop"><h2>${sh.shopName} <small style="font-size:12px;color:#5c6577">top ${last.products.length}</small></h2>
+      <ul class="hl">${hls.length?hls.map(h=>`<li class="${h.level}">${h.icon} ${h.text}</li>`).join(''):'<li>今日无变化</li>'}</ul>
+      <div class="tbl-scroll"><table><thead><tr><th>#</th><th>图</th><th>产品 / 打法情报</th><th>销量</th><th>价格</th><th>评分</th><th>差评词</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
+  }
+  window.loadRv=async(pid)=>{const el=document.getElementById('rv-'+pid);if(!el||el.dataset.loaded)return;el.dataset.loaded=1;
+    try{const d=await fetch('shop_data/reviews/'+pid+'.json').then(r=>r.json());const w=d.weeks?.[d.weeks.length-1];
+      el.innerHTML=(w?.reviews||[]).slice(0,50).map(r=>`<div>[${r.rating??'?'}★] ${r.text}</div>`).join('')||'<i style="color:#999">暂无评论(每周日抓)</i>';
+    }catch{el.innerHTML='<i style="color:#999">评论每周日抓取</i>';}};
+  document.getElementById('foot').textContent='shop-daily 05:00 聚合 · shop-weekly 周日 评论+DeepSeek画像 · 产品图URL每日刷新';
+})().catch(e=>{document.getElementById('sub').textContent='加载失败:'+e.message});
+</script></body></html>
