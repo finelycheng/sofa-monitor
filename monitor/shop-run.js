@@ -23,6 +23,21 @@ const sortedUrl = (shopUrl) => `${shopUrl}/product?sort=8`; // Task1 fixture 确
 function readJson(p, dflt) { return existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : dflt; }
 function writeJson(p, obj) { mkdirSync(dirname(p), { recursive: true }); const t = p + '.tmp'; writeFileSync(t, JSON.stringify(obj)); renameSync(t, p); }
 
+// 纯函数:组装单个产品快照对象,集中承载 extractProductProfile(prof) + extractShopTop(top) 的字段选择,
+// 防止像 originalPriceIdr/description/variants 这类字段在 shop-run 组装时被静默漏掉(已发生过3次)。
+// negKw 由调用方(shopDaily)另行抓取后合并,此处默认留空对象保持行为不变。
+export function buildProductRecord(prof, top, negKw = {}) {
+  return {
+    rank: top.rank, productId: top.productId, name: prof.titleFull || top.name, url: top.url,
+    imageUrl: prof.mainImages?.[0] || top.imageUrl, soldBucket: prof.soldBucket ?? top.soldBucket,
+    soldValue: prof.soldValue ?? top.soldValue, rating: prof.rating, ratingCount: prof.ratingCount,
+    price: prof.priceIdr, originalPriceIdr: prof.originalPriceIdr, discount: prof.discount,
+    variantCount: prof.variants?.length ?? 0,
+    description: prof.description, variants: prof.variants,
+    trust: prof.trust, negKw,
+  };
+}
+
 async function shopDaily() {
   const profiles = dry ? config.shopProfiles.slice(0, 1) : config.shopProfiles;
   const b = await launch();
@@ -45,12 +60,7 @@ async function shopDaily() {
           const prof = await withTimeout(extractProductProfile(b.page), 60000, `prof:${t.productId}`);
           // 复用评论区低星关键词计数(轻量,聚合)
           const negKw = await withTimeout(countNeg(b.page, NEG), 60000, `neg:${t.productId}`).catch(() => ({}));
-          products.push({ rank: t.rank, productId: t.productId, name: prof.titleFull || t.name, url: t.url,
-            imageUrl: prof.mainImages?.[0] || t.imageUrl, soldBucket: prof.soldBucket ?? t.soldBucket,
-            soldValue: prof.soldValue ?? t.soldValue, rating: prof.rating, ratingCount: prof.ratingCount,
-            price: prof.priceIdr, discount: prof.discount, variantCount: prof.variants?.length ?? 0,
-            description: prof.description, variants: prof.variants,
-            trust: prof.trust, negKw });
+          products.push(buildProductRecord(prof, t, negKw));
         } catch (e) { io.log(DATA, `shop:${sp.id}:prod:${t.productId}:${e.message}`); }
       }
       const snap = { date: today, shop: sp.id, shopName: sp.name, products };
@@ -121,6 +131,10 @@ function publishShops(series, cards) {
   } catch (e) { io.log(DATA, 'shop publish failed: ' + e.message); process.exitCode = 3; }
 }
 
-if (mode === 'shop-daily') await shopDaily();
-else if (mode === 'shop-weekly') await shopWeekly();
-else { console.error('用法: node shop-run.js shop-daily|shop-weekly [--dry-run]'); process.exit(1); }
+// 仅在直接执行(node shop-run.js ...)时跑 CLI 分发;被 test/shop-run.test.js 之类 import 纯函数时不触发。
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  if (mode === 'shop-daily') await shopDaily();
+  else if (mode === 'shop-weekly') await shopWeekly();
+  else { console.error('用法: node shop-run.js shop-daily|shop-weekly [--dry-run]'); process.exit(1); }
+}
