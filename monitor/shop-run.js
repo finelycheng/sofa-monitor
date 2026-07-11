@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { launch, slowScroll, withTimeout } from './lib/browser.js';
 import { extractShopTop, extractProductProfile } from './scrape/shopProfile.js';
 import { extractReviews } from './scrape/productReviews.js';
-import { analyzePlaybook, analyzeReviewInsight } from './scrape/playbookAnalyzer.js';
+import { analyzePlaybook, analyzeReviewInsight, translateNames } from './scrape/playbookAnalyzer.js';
 import { updateShopSeries, shopHighlights } from './analyze-shops.js';
 import * as io from './lib/io.js';
 
@@ -62,6 +62,14 @@ async function shopDaily() {
           const negKw = await withTimeout(countNeg(b.page, NEG), 60000, `neg:${t.productId}`).catch(() => ({}));
           products.push(buildProductRecord(prof, t, negKw));
         } catch (e) { io.log(DATA, `shop:${sp.id}:prod:${t.productId}:${e.message}`); }
+      }
+      // 批量把印尼语产品名翻译成中文(一次DeepSeek调用/店,便宜),存 nameCn
+      const dKey = process.env.DEEPSEEK_API_KEY;
+      if (dKey && products.length) {
+        try {
+          const cn = await translateNames(products.map((p) => p.name), { apiKey: dKey });
+          if (cn) products.forEach((p, i) => { p.nameCn = cn[i] || ''; });
+        } catch (e) { io.log(DATA, `shop:${sp.id}:translate:${e.message}`); }
       }
       const snap = { date: today, shop: sp.id, shopName: sp.name, products };
       writeJson(join(DATA, 'shops', `${sp.id}.json`), { ...(readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] })), shop: sp.id, shopName: sp.name, snapshots: [...readJson(join(DATA, 'shops', `${sp.id}.json`), { snapshots: [] }).snapshots.slice(-89).filter(s=>s.date!==today), { date: today, products }] });

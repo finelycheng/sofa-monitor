@@ -63,3 +63,13 @@ export async function analyzeReviewInsight(product, reviews, opts = {}) {
   const card = await callDeepSeek(buildReviewInsightPrompt(product, reviews), { maxTokens: 1000, ...opts });
   return card ? { productId: product.productId, ...card } : null;
 }
+
+// ── 批量把印尼语产品名翻译成简洁中文(一次调用翻一店 top20)──
+export async function translateNames(names, opts = {}) {
+  if (!names || !names.length) return null;
+  const prompt = `把以下印尼语沙发产品名翻译成简洁中文,每个≤18字,保留型号/尺寸/材质/关键卖点(如 真空压缩/2in1/密度D23)。只输出 JSON,names 数组顺序与输入一一对应:
+${names.map((n, i) => `${i}. ${n}`).join('\n')}
+输出格式: {"names":["中文名0","中文名1", ...]}`;
+  const r = await callDeepSeek(prompt, { maxTokens: 1500, ...opts });
+  return Array.isArray(r?.names) ? r.names : null;
+}

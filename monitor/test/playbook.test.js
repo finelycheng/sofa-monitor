@@ -57,3 +57,17 @@ test('analyzeReviewInsight 失败返 null 不抛', async () => {
   const card = await analyzeReviewInsight({ productId: 'p1' }, [], { apiKey: 'sk-test', fetchImpl });
   assert.equal(card, null);
 });
+
+import { translateNames } from '../scrape/playbookAnalyzer.js';
+
+test('translateNames 批量翻译返回中文数组', async () => {
+  const fake = { names: ['MeeXi真空压缩沙发床D23', 'Quantum三折沙发床20cm'] };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(fake) } }] }) });
+  const cn = await translateNames(['MeeXi Sofabed Density 23 Vacuum', 'Quantum Lipat 3 Tebal 20cm'], { apiKey: 'sk-test', fetchImpl });
+  assert.equal(cn.length, 2);
+  assert.equal(cn[0], 'MeeXi真空压缩沙发床D23');
+});
+
+test('translateNames 空输入返 null', async () => {
+  assert.equal(await translateNames([], { apiKey: 'sk-test' }), null);
+});
