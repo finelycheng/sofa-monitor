@@ -52,6 +52,7 @@ async function shopDaily() {
       let top;
       try { await withTimeout(slowScroll(b.page), 60000, `sc:${sp.id}`); top = await withTimeout(extractShopTop(b.page, dry ? 3 : sp.topN), 60000, `top:${sp.id}`); }
       catch (e) { io.log(DATA, `shop:${sp.id}:top:${e.message}`); continue; }
+      const imgDir = join(DATA, 'shop-images'); mkdirSync(imgDir, { recursive: true });
       const products = [];
       for (const t of top) {
         const pr = await b.visit(t.url);
@@ -61,7 +62,12 @@ async function shopDaily() {
           const prof = await withTimeout(extractProductProfile(b.page), 60000, `prof:${t.productId}`);
           // 复用评论区低星关键词计数(轻量,聚合)
           const { negKw, posKw } = await withTimeout(countKeywords(b.page, POS, NEG), 60000, `kw:${t.productId}`).catch(() => ({ negKw: {}, posKw: {} }));
-          products.push(buildProductRecord(prof, t, negKw, posKw));
+          const rec = buildProductRecord(prof, t, negKw, posKw);
+          // 主图当场下载,存本地相对路径;失败则保留 imageUrl 兜底
+          if (rec.imageUrl && await downloadImage(b.page, rec.imageUrl, join(imgDir, `${t.productId}.jpg`))) {
+            rec.image = `images/${t.productId}.jpg`;
+          }
+          products.push(rec);
         } catch (e) { io.log(DATA, `shop:${sp.id}:prod:${t.productId}:${e.message}`); }
       }
       // 批量把印尼语产品名翻译成中文(一次DeepSeek调用/店,便宜),存 nameCn
@@ -80,6 +86,20 @@ async function shopDaily() {
   } finally { await b.close(); }
   publishShops(series);
   io.log(DATA, `shop-daily done: shops=${Object.keys(series).length}`);
+}
+
+// 把签名图当场下载到本地(Tokopedia CDN 签名 URL ~12h 过期,热链会 403)。
+// 用浏览器 context 的 request(服务端请求,绕过 CORS,复用已过 Akamai 的网络栈)。
+export async function downloadImage(page, url, dest, { timeout = 20000 } = {}) {
+  if (!url) return false;
+  try {
+    const resp = await page.context().request.get(url, { timeout });
+    if (!resp.ok()) return false;
+    const buf = await resp.body();
+    if (!buf || buf.length < 500) return false; // 太小多半是错误页/占位图
+    writeFileSync(dest, buf);
+    return true;
+  } catch { return false; }
 }
 
 // 一次抓评论文本,同时数好评词+差评词各自出现条数
@@ -147,6 +167,8 @@ function publishShops(series, cards, insights) {
     writeFileSync(join(d, 'shop-insights.json'), JSON.stringify(allInsights));
     const reviewsSrc = join(DATA, 'shop-reviews');
     if (existsSync(reviewsSrc)) cpSync(reviewsSrc, join(d, 'reviews'), { recursive: true });
+    const imgSrc = join(DATA, 'shop-images'); // 本地下载的产品主图,随 shop_data 一起发布
+    if (existsSync(imgSrc)) cpSync(imgSrc, join(d, 'images'), { recursive: true });
     copyFileSync(htmlSrc, join(OUT, 'shop-profiles.html'));
   } catch (e) { io.log(DATA, 'shop publish failed: ' + e.message); process.exitCode = 3; }
 }

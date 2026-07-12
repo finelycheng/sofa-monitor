@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildProductRecord } from '../shop-run.js';
+import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { buildProductRecord, downloadImage } from '../shop-run.js';
+
+// fakePage 模拟 Playwright page.context().request.get:按给定 body/ok 返回
+const fakePage = (buf, ok = true) => ({
+  context: () => ({ request: { get: async () => ({ ok: () => ok, body: async () => buf }) } }),
+});
 
 // mock: extractProductProfile() 返回值
 const prof = {
@@ -65,4 +73,25 @@ test('buildProductRecord 在 prof 字段缺失时回退到 top 的字段(标题/
   assert.equal(rec.soldBucket, top.soldBucket);
   assert.equal(rec.soldValue, top.soldValue);
   assert.equal(rec.negKw && typeof rec.negKw, 'object');
+});
+
+test('downloadImage 把签名图字节写盘并返回 true', async () => {
+  const dest = join(tmpdir(), `dltest-${process.pid}.jpg`);
+  rmSync(dest, { force: true });
+  const bytes = Buffer.alloc(2000, 7); // 足够大,过 500 字节下限
+  const ok = await downloadImage(fakePage(bytes), 'https://x/img.jpg', dest);
+  assert.equal(ok, true);
+  assert.equal(existsSync(dest), true);
+  assert.equal(readFileSync(dest).length, 2000);
+  rmSync(dest, { force: true });
+});
+
+test('downloadImage 对空 URL / 非 200 / 过小响应返回 false,不写盘', async () => {
+  const dest = join(tmpdir(), `dltest-neg-${process.pid}.jpg`);
+  rmSync(dest, { force: true });
+  const big = Buffer.alloc(2000, 1);
+  assert.equal(await downloadImage(fakePage(big), '', dest), false);          // 空 URL
+  assert.equal(await downloadImage(fakePage(big, false), 'https://x/a', dest), false); // 非 200
+  assert.equal(await downloadImage(fakePage(Buffer.alloc(100)), 'https://x/a', dest), false); // 太小
+  assert.equal(existsSync(dest), false);
 });

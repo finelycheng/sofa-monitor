@@ -63,7 +63,8 @@ const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
         <div><b>⭐ 口碑</b>:${ins.wordOfMouth||'—'}</div></div>`
         :`<div class="subcard insight"><i style="color:#999">评论洞察待每周 DeepSeek 生成(周日跑)</i></div>`;
       const cardHtml=`<div class="card" id="c-${p.productId}">${playbookHtml}${insHtml}<div class="reviews" id="rv-${p.productId}"><i style="color:#999">评论加载…</i></div></div>`;
-      return `<tr><td>${p.rank}</td><td>${p.imageUrl?`<img src="${p.imageUrl}" loading="lazy">`:''}</td>
+      const imgSrc=p.image?('shop_data/'+p.image):(p.imageUrl||'');
+      return `<tr><td>${p.rank}</td><td>${imgSrc?`<img src="${imgSrc}" loading="lazy">`:''}</td>
         <td class="pname"><a href="${p.url}" target="_blank">${p.name}</a>${p.nameCn?`<br><span class="cn">${p.nameCn}</span>`:''}<br><span class="expand" onclick="document.getElementById('c-${p.productId}').classList.toggle('on');loadRv('${p.productId}')">▸ 打法情报</span>${cardHtml}</td>
         <td>${p.soldValue!=null?fmt(p.soldValue):(p.soldBucket||'—')}</td>
         <td>Rp${fmt(p.price)}${p.discount?` <span style="color:#e4572e">-${p.discount}%</span>`:''}</td>
