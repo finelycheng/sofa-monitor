@@ -39,6 +39,9 @@ footer{margin-top:32px;font-family:var(--mono);font-size:11px;color:#7a8294;bord
 <footer id="foot"></footer>
 </div><script>
 const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
+// 好评/差评词固定映射(config 的 positive/negativeKeywords),中文进单元格,印尼原词放 hover
+const KW_CN={empuk:'软糯',nyaman:'舒适',bagus:'质量好',murah:'便宜',cepat:'发货快',rapi:'做工整齐',lembut:'柔软',mewah:'显高级',sobek:'破损',kempes:'塌陷','tidak mengembang':'不回弹',lama:'发货慢','beda warna':'色差','tidak sesuai':'货不对板'};
+const kwHtml=(obj)=>Object.entries(obj||{}).filter(([,v])=>v>0).map(([k,v])=>`<span title="${k}">${KW_CN[k]||k}:${v}</span>`).join(' ')||'—';
 (async()=>{
   const [series,hi,cards,insights]=await Promise.all(['shop-series.json','shop-highlights.json','shop-cards.json','shop-insights.json'].map(f=>fetch('shop_data/'+f).then(r=>r.json()).catch(()=>({}))));
   const date=hi.date||'—';
@@ -70,8 +73,8 @@ const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
         <td>Rp${fmt(p.price)}${p.discount?` <span style="color:#e4572e">-${p.discount}%</span>`:''}</td>
         <td>${p.price?'¥'+fmt(Math.round(p.price/2200)):'—'}</td>
         <td>${p.rating??'—'}<br><small>${fmt(p.ratingCount)}评</small></td>
-        <td class="kwpos">${Object.entries(p.posKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td>
-        <td class="kwneg">${Object.entries(p.negKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td></tr>`;
+        <td class="kwpos">${kwHtml(p.posKw)}</td>
+        <td class="kwneg">${kwHtml(p.negKw)}</td></tr>`;
     }).join('');
     box.insertAdjacentHTML('beforeend',`<section class="shop"><h2>${sh.shopName} <small style="font-size:12px;color:#5c6577">top ${last.products.length}</small></h2>
       <ul class="hl">${hls.length?hls.map(h=>`<li class="${h.level}">${h.icon} ${h.text}</li>`).join(''):'<li>今日无变化</li>'}</ul>
