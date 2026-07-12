@@ -28,6 +28,8 @@ td img{width:44px;height:44px;object-fit:cover;border-radius:4px}
 .card b{color:var(--indigo)}.card .snipe{color:var(--cargo);font-weight:700}
 .card .reviews{margin-top:8px;max-height:200px;overflow-y:auto;border-top:1px dashed var(--line);padding-top:6px}
 .card .reviews div{padding:3px 0;border-bottom:1px solid #eee;color:#444}
+.kwpos{color:var(--leaf);font-family:var(--mono);font-size:11px;white-space:nowrap}
+.kwneg{color:var(--cargo);font-family:var(--mono);font-size:11px;white-space:nowrap}
 .tbl-scroll{overflow-x:auto}
 footer{margin-top:32px;font-family:var(--mono);font-size:11px;color:#7a8294;border-top:1px solid var(--line);padding-top:10px}
 </style></head><body><div class="wrap">
@@ -67,11 +69,12 @@ const fmt=(n)=>n==null?'—':n.toLocaleString('id-ID');
         <td>Rp${fmt(p.price)}${p.discount?` <span style="color:#e4572e">-${p.discount}%</span>`:''}</td>
         <td>${p.price?'¥'+fmt(Math.round(p.price/2200)):'—'}</td>
         <td>${p.rating??'—'}<br><small>${fmt(p.ratingCount)}评</small></td>
-        <td>${Object.entries(p.negKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td></tr>`;
+        <td class="kwpos">${Object.entries(p.posKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td>
+        <td class="kwneg">${Object.entries(p.negKw||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')||'—'}</td></tr>`;
     }).join('');
     box.insertAdjacentHTML('beforeend',`<section class="shop"><h2>${sh.shopName} <small style="font-size:12px;color:#5c6577">top ${last.products.length}</small></h2>
       <ul class="hl">${hls.length?hls.map(h=>`<li class="${h.level}">${h.icon} ${h.text}</li>`).join(''):'<li>今日无变化</li>'}</ul>
-      <div class="tbl-scroll"><table><thead><tr><th>#</th><th>图</th><th>产品(印尼名/中文) / 打法情报</th><th>月销量</th><th>价格 Rp</th><th>约 ¥</th><th>评分</th><th>差评词</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
+      <div class="tbl-scroll"><table><thead><tr><th>#</th><th>图</th><th>产品(印尼名/中文) / 打法情报</th><th>月销量</th><th>价格 Rp</th><th>约 ¥</th><th>评分</th><th>好评词</th><th>差评词</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
   }
   window.loadRv=async(pid)=>{const el=document.getElementById('rv-'+pid);if(!el||el.dataset.loaded)return;el.dataset.loaded=1;
     try{const d=await fetch('shop_data/reviews/'+pid+'.json').then(r=>r.json());const w=d.weeks?.[d.weeks.length-1];

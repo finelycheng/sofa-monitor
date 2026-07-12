@@ -61,6 +61,7 @@
     "fxChangePct": 3, "missingDays": 2, "restockMin": 20
   },
   "negativeKeywords": ["sobek", "kempes", "tidak mengembang", "lama", "beda warna", "tidak sesuai"],
+  "positiveKeywords": ["empuk", "nyaman", "bagus", "murah", "cepat", "rapi", "lembut", "mewah"],
   "campaignCalendar": [
     {"date": "07-07", "label": "Tokopedia 7.7 大促"},
     {"date": "09-09", "label": "9.9 大促"},

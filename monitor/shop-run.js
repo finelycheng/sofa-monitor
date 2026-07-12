@@ -14,6 +14,7 @@ const DATA = process.env.MONITOR_DATA ?? join(ROOT, 'data');
 const OUT = process.env.MONITOR_OUT ?? join(ROOT, 'out');
 const config = JSON.parse(readFileSync(join(ROOT, 'monitor.config.json'), 'utf8'));
 const NEG = config.negativeKeywords;
+const POS = config.positiveKeywords || [];
 const mode = process.argv[2];
 const dry = process.argv.includes('--dry-run');
 const today = new Date().toISOString().slice(0, 10);
@@ -25,8 +26,8 @@ function writeJson(p, obj) { mkdirSync(dirname(p), { recursive: true }); const t
 
 // 纯函数:组装单个产品快照对象,集中承载 extractProductProfile(prof) + extractShopTop(top) 的字段选择,
 // 防止像 originalPriceIdr/description/variants 这类字段在 shop-run 组装时被静默漏掉(已发生过3次)。
-// negKw 由调用方(shopDaily)另行抓取后合并,此处默认留空对象保持行为不变。
-export function buildProductRecord(prof, top, negKw = {}) {
+// negKw/posKw 由调用方(shopDaily)另行抓取后合并,此处默认留空对象保持行为不变。
+export function buildProductRecord(prof, top, negKw = {}, posKw = {}) {
   return {
     rank: top.rank, productId: top.productId, name: prof.titleFull || top.name, url: top.url,
     imageUrl: prof.mainImages?.[0] || top.imageUrl, soldBucket: prof.soldBucket ?? top.soldBucket,
@@ -34,7 +35,7 @@ export function buildProductRecord(prof, top, negKw = {}) {
     price: prof.priceIdr, originalPriceIdr: prof.originalPriceIdr, discount: prof.discount,
     variantCount: prof.variants?.length ?? 0,
     description: prof.description, variants: prof.variants,
-    trust: prof.trust, negKw,
+    trust: prof.trust, negKw, posKw,
   };
 }
 
@@ -59,8 +60,8 @@ async function shopDaily() {
         try {
           const prof = await withTimeout(extractProductProfile(b.page), 60000, `prof:${t.productId}`);
           // 复用评论区低星关键词计数(轻量,聚合)
-          const negKw = await withTimeout(countNeg(b.page, NEG), 60000, `neg:${t.productId}`).catch(() => ({}));
-          products.push(buildProductRecord(prof, t, negKw));
+          const { negKw, posKw } = await withTimeout(countKeywords(b.page, POS, NEG), 60000, `kw:${t.productId}`).catch(() => ({ negKw: {}, posKw: {} }));
+          products.push(buildProductRecord(prof, t, negKw, posKw));
         } catch (e) { io.log(DATA, `shop:${sp.id}:prod:${t.productId}:${e.message}`); }
       }
       // 批量把印尼语产品名翻译成中文(一次DeepSeek调用/店,便宜),存 nameCn
@@ -81,11 +82,12 @@ async function shopDaily() {
   io.log(DATA, `shop-daily done: shops=${Object.keys(series).length}`);
 }
 
-async function countNeg(page, negKw) {
+// 一次抓评论文本,同时数好评词+差评词各自出现条数
+async function countKeywords(page, posWords, negWords) {
   await slowScroll(page, 6);
   const texts = await page.evaluate(() => [...document.querySelectorAll('article')].map((n) => n.innerText).filter((t) => /lalu/.test(t)));
-  const kw = {}; for (const k of negKw) kw[k] = texts.filter((t) => t.toLowerCase().includes(k)).length;
-  return kw;
+  const count = (words) => { const o = {}; for (const w of words) o[w] = texts.filter((t) => t.toLowerCase().includes(w)).length; return o; };
+  return { negKw: count(negWords), posKw: count(posWords) };
 }
 
 async function shopWeekly() {

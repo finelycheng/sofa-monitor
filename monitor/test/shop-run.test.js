@@ -40,7 +40,7 @@ test('buildProductRecord 锁死此前静默丢过的字段: description/variants
 });
 
 test('buildProductRecord 组装完整快照(rank/productId/url/imageUrl/sold/rating等取自prof优先,回退top)', () => {
-  const rec = buildProductRecord(prof, top, { kempes: 2 });
+  const rec = buildProductRecord(prof, top, { kempes: 2 }, { empuk: 3 });
   assert.equal(rec.rank, 1);
   assert.equal(rec.productId, '12345');
   assert.equal(rec.name, prof.titleFull);
@@ -52,6 +52,7 @@ test('buildProductRecord 组装完整快照(rank/productId/url/imageUrl/sold/rat
   assert.equal(rec.ratingCount, prof.ratingCount);
   assert.equal(rec.variantCount, prof.variants.length);
   assert.deepEqual(rec.negKw, { kempes: 2 });
+  assert.deepEqual(rec.posKw, { empuk: 3 });
 });
 
 test('buildProductRecord 在 prof 字段缺失时回退到 top 的字段(标题/图片/销量)', () => {
